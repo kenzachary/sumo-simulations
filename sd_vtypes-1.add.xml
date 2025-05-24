@@ -1,0 +1,8 @@
+<additional>
+    <vType id="car" vClass="passenger" accel="2.6" decel="4.5" length="5.0" maxSpeed="55.6"/>
+    <vType id="motorcycle" vClass="motorcycle" accel="2.6" decel="4.5" length="2.10" maxSpeed="16.67"/>
+    <vType id="truck" vClass="truck" accel="2.6" decel="4.5" length="7.1" maxSpeed="36.11"/>
+    <vType id="bus" vClass="bus" accel="2.6" decel="4.5" length="12" maxSpeed="27.78"/>
+</additional>
+
+
