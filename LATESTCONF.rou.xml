@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2025-02-07 09:19:06 by Eclipse SUMO netedit Version 1.21.0
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <!-- VTypes -->
+    <vType id="DEFAULT_VEHTYPE" vClass="bus"/>
+    <vType id="t_0"/>
+    <vType id="t_1"/>
+    <!-- Vehicles, persons and containers (sorted by depart) -->
+    <flow id="f_0" type="DEFAULT_BIKETYPE" begin="0.00" from="-29251749#0" to="-4922743#3" via="-4922743#4" end="3600.00" vehsPerHour="1800"/>
+    <flow id="f_1" type="DEFAULT_BIKETYPE" begin="0.00" from="237386420#2" to="617654357#3" via="237386421 617654357#0 617654357#1 617654357#2" end="3600.00" vehsPerHour="1800"/>
+    <flow id="f_2" type="DEFAULT_BIKETYPE" begin="0.00" from="4922743#1" to="29251749#2" via="4922743#2 4922743#3 4922743#4 29251749#0 29251749#1" end="3600.00" vehsPerHour="1800"/>
+    <flow id="f_4" begin="0.00" from="-481337812#4" to="565965575#2" via="481337812#6 565965575#5 565965575#4 565965575#3" end="3600.00" vehsPerHour="1800"/>
+    <flow id="f_5" begin="0.00" from="237386421" to="4922743#3" via="29251749#1 29251749#0 4922743#4" end="3600.00" vehsPerHour="1800"/>
+    <flow id="f_6" begin="0.00" from="-617654357#3" to="-1232571604" via="-617654357#2 -617654357#1 -617654357#0" end="3600.00" vehsPerHour="1800"/>
+    <flow id="f_7" begin="0.00" from="237386421" to="617654357#3" via="617654357#0 617654357#1 617654357#2" end="3600.00" vehsPerHour="1800"/>
+    <flow id="f_8" begin="0.00" from="4922743#1" to="29251749#1" via="4922743#2 4922743#3 4922743#4 29251749#0" end="3600.00" vehsPerHour="1800"/>
+</routes>

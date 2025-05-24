@@ -1,0 +1,95 @@
+import traci
+import csv
+import pandas as pd
+import os
+from datetime import datetime
+
+
+# Define the output folder inside the current directory
+output_folder = "Emission_Outputs"
+
+# Create the folder if it doesn't exist
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
+
+# Define custom emissions model for different vehicle types
+def my_emission_model(vehicle_type, speed, acceleration):
+    """
+    Compute emissions based on vehicle type.
+    Modify the coefficients for A, B, C for each type.
+    """
+    emission_factors = {
+        "passenger": {"CO": 49.5, "CO2": 506.00, "HC": 6.0 , "NOx": 2.7, "PMx": 0.10, "SOx":0.011},  # Example: Cars
+        "bus": {"CO": 12.4 , "CO2": 1097.00, "HC": 3.7 , "NOx": 12.5 , "PMx":1.60 , "SOx":0.374 },  # Example: Buses
+        "truck": {"CO": 12.4, "CO2": 1097.00, "HC": 3.7 , "NOx": 12.5 , "PMx": 1.60 , "SOx":0.374},  # Example: Trucks
+        "motorcycle": {"CO": 26.0 , "CO2": 266.00, "HC": 18.6  , "NOx": 0.2, "PMx": 2.01 , "SOx":0.004 }  # Example: Motorcycles
+    }
+
+    # Get emission factors for the given vehicle type (default: passenger)
+    factors = emission_factors.get(vehicle_type, {"A": 1.0, "B": 1.0, "C": 0.1})
+
+    # Compute emissions
+    emission_value = factors["A"] * speed + factors["B"] * acceleration + factors["C"]
+    return emission_value
+
+# Dictionary to store previous speeds (for acceleration calculation)
+previous_speeds = {}
+
+# Start SUMO with TraCI
+sumoCmd = ["sumo", "-c", "feb27config.sumocfg", "--start"]
+traci.start(sumoCmd)
+
+# Data storage
+data = []
+
+while traci.simulation.getMinExpectedNumber() > 0:
+    traci.simulationStep()  # Advance simulation
+    current_time = traci.simulation.getTime()
+
+    for vehID in traci.vehicle.getIDList():
+        # Get vehicle type
+        vehicle_type = traci.vehicle.getTypeID(vehID)  # Retrieves vehicle type
+
+        # Get speed
+        speed = traci.vehicle.getSpeed(vehID)  # m/s
+
+        # Compute acceleration
+        if vehID in previous_speeds:
+            acceleration = (speed - previous_speeds[vehID]) / traci.simulation.getDeltaT()
+        else:
+            acceleration = 0.0  # No acceleration for first step
+
+        # Store current speed for next step
+        previous_speeds[vehID] = speed
+
+        # Apply custom emissions model
+        emission = my_emission_model(vehicle_type, speed, acceleration)
+
+        # Store data
+        data.append([current_time, vehID, vehicle_type, speed, acceleration, emission])
+
+        # Print results
+        print(f"Time: {current_time:.1f}s | Vehicle: {vehID} ({vehicle_type}) | Speed: {speed:.2f} m/s | "
+              f"Acceleration: {acceleration:.2f} m/s² | Emission: {emission:.2f}")
+
+traci.close()
+
+# Convert data to Pandas DataFrame
+df = pd.DataFrame(data, columns=["Time (s)", "Vehicle ID", "Vehicle Type", "Speed (m/s)", "Acceleration (m/s²)", "Custom Emission Value"])
+
+
+current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+csv_filename = f"custom_vehicle_emissions_{current_time}.csv"
+
+# Define file paths
+csv_filepath = os.path.join(output_folder, csv_filename)
+
+# Save to CSV
+df.to_csv(csv_filepath, index=False)
+#df.to_csv(csv_filename, index=False)
+print(f"Emissions data saved to {csv_filename}")
+
+
+
+

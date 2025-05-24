@@ -1,0 +1,129 @@
+import traci
+import csv
+import pandas as pd
+import os
+from datetime import datetime
+
+# Define the output folder inside the current directory
+output_folder = "Emission_Outputs"
+
+# Create the folder if it doesn't exist
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
+
+# Define emission factors (grams per km) based on Vergel and Tiglao
+EMISSION_FACTORS = {
+    "passenger": {"CO2": 506.00, "NOx": 2.7, "PMx": 0.02, "SOx":0.011, "HC": 6.0,"CO": 49.5},
+    "bus": {"CO2": 800, "NOx": 1.5, "PMx": 0.08, "SOx":0.011, "HC": 6.0,"CO": 49.5},
+    "truck": {"CO2": 1200, "NOx": 3.0, "PMx": 0.12, "SOx":0.011, "HC": 6.0,"CO": 49.5},
+    "motorcycle": {"CO2": 90, "NOx": 0.2, "PMx": 0.01, "SOx":0.011, "HC": 6.0,"CO": 49.5},
+    "DEFAULT_VEHTYPE": {"CO2": 1.0, "NOx": 1.0, "PMx": 0.1, "SOx":0.011, "HC": 6.0,"CO": 49.5},
+    "DEFAULT_BIKETYPE": {"CO2": 90, "NOx": 0.2, "PMx": 0.01, "SOx":0.011, "HC": 6.0,"CO": 49.5},
+    "DEFAULT_VEHTYPE": {"CO2": 150, "NOx": 0.4, "PMx": 0.02, "SOx":0.011, "HC": 6.0,"CO": 49.5},
+    
+}
+DEFAULT_EMISSION_FACTORS = {"CO2": 200, "NOx": 0.5, "PMx": 0.03, "SOx":0.011, "HC": 6.0,"CO": 49.5}
+
+# Dictionary to track distance per vehicle (to avoid duplicate counting)
+vehicle_distances = {}
+
+# Set to track unique vehicles for counting
+seen_vehicles = set()
+
+# Dispersion parameters
+WIND_SPEED = 1  # m/s
+CLOUD_DEPTH = 50  # m
+
+# Start SUMO
+sumoCmd = ["sumo", "-c", "feb27config.sumocfg", "--start"]
+traci.start(sumoCmd)
+
+while traci.simulation.getMinExpectedNumber() > 0:
+    traci.simulationStep()
+    
+    for vehID in traci.vehicle.getIDList():
+        vehicle_type = traci.vehicle.getTypeID(vehID)
+        #print(f"Current Vehicle ID: {vehID}, Current Type: {vehicle_type}")
+
+        #This should not happen, but just in case
+        if vehicle_type not in EMISSION_FACTORS:
+            EMISSION_FACTORS[vehicle_type] = DEFAULT_EMISSION_FACTORS.copy()
+            print(f"⚠ New vehicle type detected: '{vehicle_type}'. Assigned default emission factors.")
+
+        distance = traci.vehicle.getDistance(vehID) / 1000  # Convert meters to km
+        
+        # Track individual vehicle distance
+        if vehID not in vehicle_distances:
+            vehicle_distances[vehID] = {"type": vehicle_type, "total_distance": 0}
+
+        # Accumulate distance correctly
+        vehicle_distances[vehID]["total_distance"] = distance
+
+        # Only count the vehicle once per type
+        if vehID not in seen_vehicles:
+            seen_vehicles.add(vehID)
+
+
+traci.close()
+
+#print(vehicle_distances)
+# Compute emissions for each vehicle category
+emission_summary = {}
+
+# Sum total distance traveled per vehicle type
+vehicle_type_distances = {}
+
+for vehID, data in vehicle_distances.items():
+    vtype = data["type"]
+    distance = data["total_distance"]
+
+    if vtype not in vehicle_type_distances:
+        vehicle_type_distances[vtype] = {"total_distance": 0, "vehicle_count": 0}
+
+    # Sum total distance per type
+    vehicle_type_distances[vtype]["total_distance"] += distance
+    vehicle_type_distances[vtype]["vehicle_count"] += 1
+
+# Compute emissions per vehicle type
+for vtype, data in vehicle_type_distances.items():
+    total_distance = data["total_distance"]
+    vehicle_count = data["vehicle_count"]
+
+    if vtype not in emission_summary:
+        emission_summary[vtype] = {"Total Distance (km)": total_distance, "CO2": 0, "NOx": 0, "PMx": 0, "SOx":0, "HC": 0,"CO": 0, "Vehicle Count": vehicle_count,"CO2 Dispersion (µg/m3)" :0 , "NOx Dispersion (µg/m3)":0, "PMx Dispersion (µg/m3)":0, "SOx Dispersion (µg/m3)":0, "HC Dispersion (µg/m3)":0, "CO Dispersion (µg/m3)":0}
+        print(f"\n Vehicle Type: {vtype}")
+        print(f"   - Total Distance (∑ D_i): {total_distance:.2f} km")
+        print(f"   - Vehicle Count (v_i): {vehicle_count}")
+
+    # Apply emission factors
+    for pollutant in ["CO2", "NOx", "PMx", "SOx", "HC","CO"]:
+        emissions = total_distance * EMISSION_FACTORS[vtype][pollutant]  # Remove vehicle_count multiplier
+        emission_summary[vtype][pollutant] = emissions
+        # Hanna et al. dispersion model
+        cloud_width = 0.1 * total_distance * 1000  # Convert km to m
+        dispersion = (1e9 * emissions / (WIND_SPEED * CLOUD_DEPTH * cloud_width))
+        emission_summary[vtype][f"{pollutant} Dispersion (µg/m3)"] = dispersion
+        print(f"   - {pollutant} Emissions: {emissions:.2f} g (Using EF = {EMISSION_FACTORS[vtype][pollutant]} g/km)")
+
+print(emission_summary)
+
+
+
+
+#Saving Of the Results
+df = pd.DataFrame.from_dict(emission_summary, orient="index").reset_index()
+df.columns = ["Vehicle Type", "Total Distance (km)", "CO2 Emissions (g)", "NOx Emissions (g)", "PMx Emissions (g)", "SOx Emissions (g)", "HC Emissions (g)", "CO Emissions (g)", "Vehicle Count","CO2 Dispersion (µg/m3)", "NOx Dispersion (µg/m3)", "PMx Dispersion (µg/m3)", "SOx Dispersion (µg/m3)", "HC Dispersion (µg/m3)", "CO Dispersion (µg/m3)"]
+
+
+
+
+current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+csv_filename = f"custom_vehicle_emissions_v2_{current_time}.csv"
+
+# Define file paths
+csv_filepath = os.path.join(output_folder, csv_filename)
+
+# Save to CSV
+df.to_csv(csv_filepath, index=False, encoding="utf-8-sig")
+#df.to_csv(csv_filename, index=False)
+print(f"Emissions data saved to {csv_filename}")

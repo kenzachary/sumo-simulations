@@ -1,0 +1,37 @@
+import csv
+import random
+from xml.etree.ElementTree import Element, SubElement, ElementTree
+
+# Replace with your real edges
+in_edges = ["edgeA", "edgeB", "edgeC", "edgeD"]
+out_edges = ["edgeE", "edgeF", "edgeG", "edgeH"]
+
+vehicle_types = ["car", "motorcycle", "truck"]
+
+# Load CSV and build trip elements
+trips = Element("trips")
+
+with open("traffic.csv", newline='') as csvfile:
+    reader = csv.DictReader(csvfile)
+    vehicle_id = 0
+    for row in reader:
+        timestamp = int(float(row["timestamp"]))  # 0, 15, 30, ...
+        for vtype in vehicle_types:
+            count = int(row[vtype])
+            for _ in range(count):
+                from_edge = random.choice(in_edges)
+                to_edge = random.choice(out_edges)
+                while to_edge == from_edge:
+                    to_edge = random.choice(out_edges)
+                trip = SubElement(trips, "trip", {
+                    "id": f"{vtype}_{vehicle_id}",
+                    "type": vtype,
+                    "depart": str(timestamp),
+                    "from": from_edge,
+                    "to": to_edge
+                })
+                vehicle_id += 1
+
+# Write to XML
+tree = ElementTree(trips)
+tree.write("trips.trips.xml", encoding="utf-8", xml_declaration=True)
