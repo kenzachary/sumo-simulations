@@ -1,0 +1,15 @@
+
+
+
+Step 1: run "o.py" then run "A.py"
+
+Step 2:duarouter -n smaller.net.xml --route-files v5_trips.trips.xml -o v5_dir_routes.rou.xml --additional-files vtypes-1.add.xml
+
+Step 3: run "tracitry.py"
+
+Step 4: run "lane_emissions_xml_csv_v6_2.py"
+Optional: run "custom_emissions_cleaner_v4"
+
+
+
+

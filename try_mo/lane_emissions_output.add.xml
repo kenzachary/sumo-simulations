@@ -1,0 +1,3 @@
+<additional>
+    <laneData id="lane_emissions" type="emissions" period="3600" file="lane_emissions-dir.xml" excludeEmpty="true"/>
+</additional>
